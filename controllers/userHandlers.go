@@ -70,7 +70,39 @@ func (m *UserRepository) UpdateUserName(w http.ResponseWriter, r *http.Request) 
 	// update user in db
 	err = m.DB.UpdateUser(id, user)
 	if err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK)
+}
+
+func (m *UserRepository) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
+	// get ID from uri
+	id := chi.URLParam(r, "id")
+
+	// Get new password from body
+	var passwordUser struct {
+		Password string `json:"password" bson:"password"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&passwordUser)
+	if err != nil {
 		utils.ErrorJSON(w, err)
+		return
+	}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passwordUser.Password), 12)
+	if err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	var user models.User
+	user.Password = string(hashedPassword)
+
+	// update user in db
+	err = m.DB.UpdateUser(id, user)
+	if err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
 		return
 	}
 

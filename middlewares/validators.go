@@ -46,6 +46,39 @@ func (m *Repository) HasUsername(next http.Handler) http.Handler {
 	})
 }
 
+func (m *Repository) ValidateUpdateUserPasswordPayload(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var passwordUser struct {
+			Password    string `json:"password" validate:"required"`
+			OldPassword string `json:"oldPassword" validate:"required"`
+		}
+
+		utils.MiddlewareBodyDecoder(r, &passwordUser)
+
+		// validate payload
+		err := m.App.Validator.Struct(passwordUser)
+		if err != nil {
+			utils.ErrorJSON(w, err)
+			return
+		}
+
+		// check if old password is correct
+		id := chi.URLParam(r, "id")
+		user, err := m.DB.GetUserById(id)
+		if err != nil {
+			utils.ErrorJSON(w, err, http.StatusInternalServerError)
+			return
+		}
+		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(passwordUser.OldPassword))
+		if err != nil {
+			utils.ErrorJSON(w, err, http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (m *Repository) ValidateUpdatePasswordPayload(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var passwordUser struct {

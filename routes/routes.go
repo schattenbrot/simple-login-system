@@ -31,4 +31,5 @@ func userRouter(r chi.Router) {
 	r.With(middlewares.Repo.IsAuth).Get("/", controllers.User.GetUsers)
 	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.HasEmail).Patch("/{id}/email", controllers.User.UpdateUserEmail)
 	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.HasUsername).Patch("/{id}/name", controllers.User.UpdateUserName)
+	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.ValidateUpdateUserPasswordPayload).Patch("/{id}/password", controllers.User.UpdateUserPassword)
 }
