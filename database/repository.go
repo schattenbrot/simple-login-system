@@ -16,6 +16,7 @@ type DatabaseRepository interface {
 	GetUserById(id string) (*models.User, error)
 	GetUserByUsername(username string) (*models.User, error)
 	UpdateUser(id string, user models.User) error
+	UpdatePasswordResetToken(id string, user models.User) error
 }
 
 type dbRepo struct {

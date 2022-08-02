@@ -104,6 +104,36 @@ func (m *dbRepo) UpdateUser(id string, user models.User) error {
 
 	collection := m.DB.Collection("users")
 
+	var unsetUser struct {
+		ResetPasswordToken       string `bson:"resetPasswordToken"`
+		ResetPasswordTokenExpire string `bson:"resetPasswordTokenExpire"`
+	}
+	if user.ResetPasswordToken == "" {
+		unsetUser.ResetPasswordToken = ""
+		unsetUser.ResetPasswordTokenExpire = ""
+	}
+
+	update := bson.M{"$set": user, "$unset": unsetUser}
+
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	_, err = collection.UpdateByID(ctx, oid, update)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *dbRepo) UpdatePasswordResetToken(id string, user models.User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collection := m.DB.Collection("users")
+
 	update := bson.M{"$set": user}
 
 	oid, err := primitive.ObjectIDFromHex(id)

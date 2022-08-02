@@ -1,12 +1,16 @@
 package controllers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/schattenbrot/simple-login-system/models"
 	"github.com/schattenbrot/simple-login-system/utils"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (m *UserRepository) GetUsers(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +66,80 @@ func (m *UserRepository) UpdateUserName(w http.ResponseWriter, r *http.Request) 
 
 	var user models.User
 	user.Name = nameUser.Name
+
+	// update user in db
+	err = m.DB.UpdateUser(id, user)
+	if err != nil {
+		utils.ErrorJSON(w, err)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK)
+}
+
+func (m *UserRepository) RequestResetPassword(w http.ResponseWriter, r *http.Request) {
+	// get ID from uri
+	id := chi.URLParam(r, "id")
+
+	// create reset password token
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+	token := hex.EncodeToString(b)
+
+	exp := time.Now().Add(10 * time.Minute)
+
+	// set resetpassword and resetpassword expire in db
+	var user models.User
+	user.ResetPasswordToken = token
+	user.ResetPasswordTokenExpire = exp
+
+	err := m.DB.UpdatePasswordResetToken(id, user)
+	if err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	type respData struct {
+		Token string    `json:"token"`
+		Exp   time.Time `json:"exp"`
+	}
+
+	resp := respData{
+		Token: token,
+		Exp:   exp,
+	}
+
+	utils.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (m *UserRepository) UpdatePassword(w http.ResponseWriter, r *http.Request) {
+	// get ID from uri
+	id := chi.URLParam(r, "id")
+
+	// get password from body
+	var passwordUser struct {
+		Password string `bson:"password"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&passwordUser)
+	if err != nil {
+		utils.ErrorJSON(w, err)
+		return
+	}
+
+	// hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(passwordUser.Password), 12)
+	if err != nil {
+		utils.ErrorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	var user models.User
+	user.Password = string(hashedPassword)
+	user.ResetPasswordToken = ""
 
 	// update user in db
 	err = m.DB.UpdateUser(id, user)

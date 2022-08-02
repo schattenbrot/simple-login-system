@@ -25,6 +25,8 @@ func ChiRoutes() *chi.Mux {
 func userRouter(r chi.Router) {
 	r.With(middlewares.Repo.ValidateAuthUser).Post("/register", controllers.User.Register)
 	r.With(middlewares.Repo.ValidateAuthUser).Post("/login", controllers.User.Login)
+	r.With().Get("/{id}/resetPassword", controllers.User.RequestResetPassword)
+	r.With(middlewares.Repo.ValidateUpdatePasswordPayload).Patch("/{id}/updatePassword", controllers.User.UpdatePassword)
 
 	r.With(middlewares.Repo.IsAuth).Get("/", controllers.User.GetUsers)
 	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.HasEmail).Patch("/{id}/email", controllers.User.UpdateUserEmail)
