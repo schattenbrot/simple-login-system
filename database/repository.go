@@ -12,8 +12,10 @@ import (
 
 type DatabaseRepository interface {
 	CreateUser(user models.User) (*string, error)
+	GetAllUsers() ([]*models.User, error)
 	GetUserById(id string) (*models.User, error)
 	GetUserByUsername(username string) (*models.User, error)
+	UpdateUser(id string, user models.User) error
 }
 
 type dbRepo struct {
@@ -43,6 +45,8 @@ func Open(app *config.Application) *mongo.Database {
 		app.Logger.Fatal(err)
 	}
 	db := client.Database("simpleLoginSystem")
+
+	setIndizes(app, db)
 
 	return db
 }

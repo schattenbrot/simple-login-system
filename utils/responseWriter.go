@@ -7,8 +7,13 @@ import (
 
 // writeJSON is the helper function for sending back an HTTP response.
 func WriteJSON(w http.ResponseWriter, status int, data ...interface{}) error {
-	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	if len(data) == 0 {
+		w.Write([]byte(""))
+		return nil
+	}
 
 	js, err := json.Marshal(data[0])
 	if err != nil {

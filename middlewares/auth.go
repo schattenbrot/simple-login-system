@@ -1,13 +1,12 @@
 package middlewares
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
+	"context"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"github.com/schattenbrot/simple-login-system/utils"
@@ -18,34 +17,24 @@ type AuthUser struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type contextKey int
+
+const authenticatedUserKey contextKey = 0
+
 func (m *Repository) ValidateAuthUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var authUser AuthUser
 
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			utils.ErrorJSON(w, err)
-			return
-		}
+		utils.MiddlewareBodyDecoder(r, &authUser)
 
-		err = json.NewDecoder(bytes.NewBuffer(body)).Decode(&authUser)
+		err := m.App.Validator.Struct(authUser)
 		if err != nil {
 			utils.ErrorJSON(w, err)
-			return
-		}
-		r.Body.Close()
-		r.Body = io.NopCloser(bytes.NewBuffer(body))
-
-		err = m.App.Validator.Struct(authUser)
-		if err != nil {
-			utils.ErrorJSON(w, err)
-			m.App.Logger.Println("validateauthuser 2")
 			return
 		}
 		err = utils.PasswordValidator(authUser.Password)
 		if err != nil {
 			utils.ErrorJSON(w, err)
-			m.App.Logger.Println("validateauthuser 3")
 			return
 		}
 
@@ -78,12 +67,30 @@ func (m *Repository) IsAuth(next http.Handler) http.Handler {
 			utils.ErrorJSON(w, err, http.StatusUnauthorized)
 			return
 		}
+
+		// set user in context
+		ctxWithUser := context.WithValue(r.Context(), authenticatedUserKey, issuer)
+
 		// check if the token is expired
 		expirationTime := claims.ExpiresAt
 		currTime := time.Now().Unix()
 
 		if currTime > expirationTime {
 			utils.ErrorJSON(w, errors.New("token expired"), http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctxWithUser))
+	})
+}
+
+func (m *Repository) IsUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		issuerId := r.Context().Value(authenticatedUserKey).(string)
+		targetId := chi.URLParam(r, "id")
+
+		if issuerId != targetId {
+			utils.ErrorJSON(w, errors.New("wrong user"), http.StatusUnauthorized)
 			return
 		}
 

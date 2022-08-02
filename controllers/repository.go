@@ -11,7 +11,10 @@ type Repository struct {
 	DB  database.DatabaseRepository
 }
 
+type UserRepository Repository
+
 var Repo *Repository
+var User *UserRepository
 
 func NewRepo(app *config.Application, db *mongo.Database) *Repository {
 	return &Repository{
@@ -22,4 +25,6 @@ func NewRepo(app *config.Application, db *mongo.Database) *Repository {
 
 func NewHandlers(r *Repository) {
 	Repo = r
+	user := UserRepository(*r)
+	User = &user
 }

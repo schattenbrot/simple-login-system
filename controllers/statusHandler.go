@@ -16,14 +16,14 @@ type appStatus struct {
 func (m *Repository) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	currentStatus := appStatus{
 		Status:      "Available",
-		Environment: Repo.App.Config.Env,
-		Version:     Repo.App.Version,
+		Environment: m.App.Config.Env,
+		Version:     m.App.Version,
 		Uptime:      time.Duration(time.Since(m.App.StartTime).Minutes()),
 	}
 
 	js, err := json.Marshal(currentStatus)
 	if err != nil {
-		Repo.App.Logger.Println(err)
+		m.App.Logger.Println(err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

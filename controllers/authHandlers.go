@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -17,7 +16,7 @@ type AuthUser struct {
 	Password string `json:"password"`
 }
 
-func (m *Repository) Register(w http.ResponseWriter, r *http.Request) {
+func (m *UserRepository) Register(w http.ResponseWriter, r *http.Request) {
 	var authUser AuthUser
 
 	err := json.NewDecoder(r.Body).Decode(&authUser)
@@ -58,7 +57,7 @@ func (m *Repository) Register(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusCreated, response)
 }
 
-func (m *Repository) Login(w http.ResponseWriter, r *http.Request) {
+func (m *UserRepository) Login(w http.ResponseWriter, r *http.Request) {
 	// get login data
 	var authUser AuthUser
 
@@ -74,8 +73,6 @@ func (m *Repository) Login(w http.ResponseWriter, r *http.Request) {
 		utils.ErrorJSON(w, err, http.StatusNotFound)
 		return
 	}
-	fmt.Println("user:")
-	fmt.Println(user)
 
 	// compare passwords
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(authUser.Password))

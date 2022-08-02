@@ -23,6 +23,10 @@ func ChiRoutes() *chi.Mux {
 }
 
 func userRouter(r chi.Router) {
-	r.With(middlewares.Repo.ValidateAuthUser, middlewares.Repo.IsAuth).Post("/register", controllers.Repo.Register)
-	r.With(middlewares.Repo.ValidateAuthUser).Post("/login", controllers.Repo.Login)
+	r.With(middlewares.Repo.ValidateAuthUser).Post("/register", controllers.User.Register)
+	r.With(middlewares.Repo.ValidateAuthUser).Post("/login", controllers.User.Login)
+
+	r.With(middlewares.Repo.IsAuth).Get("/", controllers.User.GetUsers)
+	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.HasEmail).Patch("/{id}/email", controllers.User.UpdateUserEmail)
+	r.With(middlewares.Repo.IsAuth, middlewares.Repo.IsUser, middlewares.Repo.HasUsername).Patch("/{id}/name", controllers.User.UpdateUserName)
 }
